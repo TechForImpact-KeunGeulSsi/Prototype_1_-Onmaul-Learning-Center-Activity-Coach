@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>온마을 활동 코치</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/compromise"></script>
+  <style>
+    body {
+      font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif;
+      background: radial-gradient(circle at top, #e0f2ff 0, #f8fbff 45%, #f1f5f9 100%);
+    }
+    .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }
+    .nav-active i, .nav-active span { color: rgb(37, 99, 235); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 pb-safe min-h-screen">
+  <header id="appHeader" class="hidden sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 shadow-sm">
+    <div class="flex justify-between items-center max-w-5xl mx-auto">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-blue-600">온마을 활동 코치</h1>
+        <p class="text-xs text-slate-500 font-medium" id="modeLabel"></p>
+      </div>
+      <button id="btnGoAccount" class="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+        <i data-lucide="user" class="w-4 h-4 text-blue-500"></i>
+        <span class="text-xs font-semibold text-blue-700" id="teacherName">로그인 필요</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto p-6 space-y-6">
+    <section id="view-login" class="max-w-md mx-auto mt-10 bg-white/95 rounded-2xl border border-slate-200 p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-slate-800 mb-2">로그인</h2>
+      <p class="text-sm text-slate-500 mb-4">교사 이름과 이메일을 입력하면 이 브라우저에만 데이터가 저장됩니다.</p>
+      <form id="loginForm" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">이름</label>
+          <input id="loginName" autocomplete="off" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="교사 이름을 입력하세요">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">이메일</label>
+          <input id="loginEmail" autocomplete="off" type="email" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="teacher@example.com">
+        </div>
+        <button id="btnLogin" type="submit" class="w-full bg-blue-600 text-white rounded-xl py-2.5 text-sm font-bold hover:bg-blue-700">
+          로그인 시작
+        </button>
+      </form>
+    </section>
+
+    <section id="view-home" class="hidden space-y-6">
+      <section class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+        <div class="relative z-10">
+          <h2 class="text-2xl font-bold mb-2">오늘 프로젝트를 기획해볼까요?</h2>
+          <p class="text-blue-100 text-sm mb-4 opacity-90">프로젝트 추천 → 일지 저장 → 보고서/시각화 순서로 진행합니다.</p>
+          <button id="btnStartProject" class="bg-white text-blue-600 px-5 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-blue-50 transition-colors flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-5 h-5"></i> 프로젝트 기획 시작
+          </button>
+        </div>
+      </section>
+      <section class="grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm text-center">
+          <p class="text-slate-400 text-sm font-medium mb-1">누적 프로젝트</p>
+          <p class="text-3xl font-black"><span id="statTotal">0</span><span class="text-lg text-slate-400 ml-1">회</span></p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm text-center">
+          <p class="text-slate-400 text-sm font-medium mb-1">최근 저장 일지</p>
+          <p id="statRecent" class="text-base font-bold truncate">아직 없음</p>
+        </div>
+      </section>
+    </section>
+
+    <section id="view-project" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+        <h2 class="text-lg font-bold mb-2">프로젝트 기획</h2>
+        <p class="text-sm text-slate-500 mb-4">처음에는 템플릿을 따를지, 직접 작성할지 선택하세요.</p>
+        <div class="grid sm:grid-cols-2 gap-3 mb-4">
+          <button id="btnUseTemplate" class="border border-blue-200 bg-blue-50 rounded-xl p-3 text-left">
+            <p class="font-semibold text-blue-700">템플릿 사용</p>
+            <p class="text-xs text-blue-500 mt-1">자연탐방/텃밭/그림 그리기 등 빠른 시작</p>
+          </button>
+          <button id="btnManualMode" class="border border-slate-200 rounded-xl p-3 text-left">
+            <p class="font-semibold text-slate-700">직접 작성</p>
+            <p class="text-xs text-slate-500 mt-1">오늘 상황에 맞게 자유롭게 작성</p>
+          </button>
+        </div>
+        <div id="templatePicker" class="hidden mb-4 space-y-2"></div>
+
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">프로젝트 제목</label>
+            <input id="projectTitle" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="예: 봄 텃밭 관찰 프로젝트">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">대상</label>
+            <input id="projectTarget" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="예: 3-4학년 12명">
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="block text-xs font-semibold text-slate-500 mb-1">오늘 목표/상황</label>
+          <textarea id="projectContext" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm min-h-[90px]" placeholder="예: 비가 와서 실내 활동 중심, 관찰+협업 역량 강화"></textarea>
+        </div>
+        <div class="mt-3">
+          <label class="block text-xs font-semibold text-slate-500 mb-1">교사 메모</label>
+          <textarea id="projectMemo" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm min-h-[70px]"></textarea>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button id="btnAiRecommend" class="bg-blue-600 text-white rounded-xl px-4 py-2.5 text-sm font-bold">AI 프로젝트 추천</button>
+          <button id="btnSaveJournal" class="bg-slate-800 text-white rounded-xl px-4 py-2.5 text-sm font-bold">일지 저장</button>
+          <button id="btnGoVisualFromProject" class="bg-indigo-600 text-white rounded-xl px-4 py-2.5 text-sm font-bold">보고서 완료 후 시각화</button>
+        </div>
+        <div id="recommendBox" class="mt-4 hidden border border-blue-200 bg-blue-50 rounded-xl p-3 text-sm"></div>
+      </div>
+    </section>
+
+    <section id="view-journal" class="hidden space-y-4">
+      <h2 class="text-lg font-bold">저장된 일지</h2>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <input id="journalKeyword" class="border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="키워드 검색">
+        <button id="btnSearchJournal" class="bg-slate-200 rounded-xl px-3 py-2 text-sm font-semibold">검색</button>
+      </div>
+      <div id="journalList" class="space-y-3"></div>
+    </section>
+
+    <section id="view-community" class="hidden space-y-4">
+      <h2 class="text-lg font-bold">마을 & 귀가 알림</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
+          <h3 class="font-semibold text-sm">귀가 알림 문구 생성</h3>
+          <input id="childName" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="아이 이름">
+          <input id="goHomeTime" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="귀가 시간 (예: 17:30)">
+          <input id="goHomeRoute" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="귀가 방식 (예: 도보, 마을버스)">
+          <button id="btnMakeGoHome" class="bg-emerald-600 text-white rounded-xl px-3 py-2 text-xs font-bold">알림 문구 만들기</button>
+          <textarea id="goHomeResult" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs min-h-[70px]" readonly></textarea>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2">
+          <h3 class="font-semibold text-sm">마을 이슈 벽</h3>
+          <select id="issueCategory" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs">
+            <option value="안전">안전</option>
+            <option value="놀이공간">놀이공간</option>
+            <option value="교통">교통</option>
+            <option value="돌봄">돌봄</option>
+            <option value="기타">기타</option>
+          </select>
+          <textarea id="issueText" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs min-h-[70px]" placeholder="아이들이 느끼는 불편, 마을 개선 아이디어 등을 적어주세요."></textarea>
+          <button id="btnAddIssue" class="bg-slate-800 text-white rounded-xl px-3 py-2 text-xs font-bold">이슈 올리기</button>
+          <div id="issueList" class="space-y-1 text-xs text-slate-700 max-h-40 overflow-y-auto"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-templates" class="hidden space-y-4">
+      <h2 class="text-lg font-bold">템플릿 생성/관리</h2>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+        <input id="tplTitle" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="템플릿 제목">
+        <textarea id="tplBody" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm min-h-[80px]" placeholder="템플릿 설명/진행 순서"></textarea>
+        <button id="btnCreateTemplate" class="bg-blue-600 text-white rounded-xl px-4 py-2 text-sm font-bold">새 템플릿 저장</button>
+      </div>
+      <div id="templateList" class="space-y-2"></div>
+    </section>
+
+    <section id="view-account" class="hidden space-y-4">
+      <h2 class="text-lg font-bold">계정 관리</h2>
+      <div class="bg-white border border-slate-200 rounded-2xl p-4 space-y-2 text-sm">
+        <p><strong>이름:</strong> <span id="accName"></span></p>
+        <p><strong>이메일:</strong> <span id="accEmail"></span></p>
+        <button id="btnLogout" class="bg-rose-600 text-white rounded-xl px-3 py-2 text-sm font-bold mt-2">로그아웃</button>
+      </div>
+    </section>
+
+    <section id="view-visuals" class="hidden space-y-4">
+      <h2 class="text-lg font-bold">시각자료 생성</h2>
+      <p class="text-sm text-slate-500">일지/보고서를 바탕으로 표와 차트를 생성합니다.</p>
+      <div id="visualEntryInfo" class="bg-white border border-slate-200 rounded-xl p-3 text-sm"></div>
+      <div class="bg-white border border-slate-200 rounded-xl p-3">
+        <h3 class="font-semibold mb-2">보고서 표</h3>
+        <table class="w-full text-xs border border-slate-200">
+          <tbody id="visualTableBody"></tbody>
+        </table>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-xl p-3">
+        <h3 class="font-semibold mb-2">일지 통계 차트</h3>
+        <div style="height:200px"><canvas id="visualChart"></canvas></div>
+      </div>
+      <div class="bg-white border border-slate-200 rounded-xl p-3">
+        <h3 class="font-semibold mb-2">관련 이미지 (오픈소스)</h3>
+        <img id="visualImage" class="w-full max-h-56 object-cover rounded-xl border border-slate-200" alt="관련 이미지">
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="btnDownloadTxt" class="bg-slate-800 text-white rounded-xl px-3 py-2 text-sm font-bold">TXT 다운로드</button>
+        <button id="btnDownloadPdf" class="bg-indigo-600 text-white rounded-xl px-3 py-2 text-sm font-bold">PDF 다운로드</button>
+      </div>
+    </section>
+  </main>
+
+  <nav id="bottomNav" class="hidden fixed bottom-0 w-full bg-white/95 border-t border-slate-200 px-6 py-3 shadow-[0_-4px_20px_rgba(15,23,42,0.08)] z-50">
+    <div class="max-w-2xl mx-auto flex justify-between items-center text-slate-400 text-[10px] font-bold">
+      <button data-tab="home" class="nav-btn flex flex-col items-center gap-1.5 p-2 nav-active"><i data-lucide="home" class="w-6 h-6"></i><span>홈</span></button>
+      <button data-tab="project" class="nav-btn flex flex-col items-center gap-1.5 p-2"><i data-lucide="sparkles" class="w-6 h-6"></i><span>프로젝트</span></button>
+      <button data-tab="journal" class="nav-btn flex flex-col items-center gap-1.5 p-2"><i data-lucide="book-open" class="w-6 h-6"></i><span>일지</span></button>
+      <button data-tab="community" class="nav-btn flex flex-col items-center gap-1.5 p-2"><i data-lucide="map-pin" class="w-6 h-6"></i><span>마을</span></button>
+      <button data-tab="templates" class="nav-btn flex flex-col items-center gap-1.5 p-2"><i data-lucide="files" class="w-6 h-6"></i><span>템플릿</span></button>
+      <button data-tab="account" class="nav-btn flex flex-col items-center gap-1.5 p-2"><i data-lucide="user-cog" class="w-6 h-6"></i><span>계정</span></button>
+    </div>
+  </nav>
+
+  <script>
+    lucide.createIcons();
+    const STORAGE_KEY = "onmaeul_app_v3";
+    const isFileMode = location.protocol === "file:";
+    const state = {
+      user: null,
+      projects: [],
+      templates: [
+        { id: "t1", title: "자연환경 탐방", body: "관찰-질문-정리 순서로 진행" },
+        { id: "t2", title: "텃밭 가꾸기", body: "도입 10분, 실습 20분, 기록 10분" },
+        { id: "t3", title: "마을 스케치 그리기", body: "마을 요소를 관찰하고 표현하기" }
+      ],
+      selectedVisualId: null,
+      projectMode: "template",
+      issues: [],
+      goHomeLogs: []
+    };
+    let visualChart = null;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        Object.assign(state, parsed || {});
+      } catch (e) {}
+    }
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+    function switchTab(tab) {
+      ["login","home","project","journal","community","templates","account","visuals"].forEach(v => {
+        const el = document.getElementById("view-" + v);
+        if (el) el.classList.toggle("hidden", v !== tab);
+      });
+      document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.toggle("nav-active", btn.dataset.tab === tab));
+      if (tab === "journal") renderJournal();
+      if (tab === "community") renderIssues();
+      if (tab === "templates" || tab === "project") renderTemplates();
+      if (tab === "account") renderAccount();
+    }
+
+    function setAuthedUI() {
+      const authed = !!state.user;
+      document.getElementById("appHeader").classList.toggle("hidden", !authed);
+      document.getElementById("bottomNav").classList.toggle("hidden", !authed);
+      document.getElementById("teacherName").textContent = authed ? state.user.name + " 교사님" : "로그인 필요";
+      document.getElementById("modeLabel").textContent = isFileMode ? "로컬 모드(file://)" : "웹/서버 모드";
+      if (authed) {
+        switchTab("home");
+        renderStats();
+      } else {
+        switchTab("login");
+      }
+    }
+
+    function renderStats() {
+      document.getElementById("statTotal").textContent = state.projects.length;
+      document.getElementById("statRecent").textContent = state.projects[0]?.title || "아직 없음";
+    }
+
+    function extractKeywords(text) {
+      const nouns = window.nlp ? window.nlp(text || "").nouns().out("array") : [];
+      return nouns.slice(0, 3);
+    }
+
+    function buildRecommendation(title, context) {
+      const keys = extractKeywords(context);
+      const tag = keys.length ? keys.join(", ") : "관찰, 협업, 기록";
+      return [
+        "프로젝트 추천: " + (title || "오늘의 마을 프로젝트"),
+        "1) 도입 10분: 오늘 목표 공유",
+        "2) 활동 20분: " + (context || "자연/농업 자원 탐색"),
+        "3) 정리 10분: 질문카드 작성",
+        "AI 키워드(오픈소스 NLP 기반): " + tag
+      ].join("\n");
+    }
+
+    function renderTemplates() {
+      const picker = document.getElementById("templatePicker");
+      const list = document.getElementById("templateList");
+      const html = state.templates.map(t => `
+        <div class="bg-white border border-slate-200 rounded-xl p-3 flex justify-between gap-3 items-start">
+          <div><p class="font-semibold text-sm">${escapeHtml(t.title)}</p><p class="text-xs text-slate-500">${escapeHtml(t.body)}</p></div>
+          <button data-apply-template="${t.id}" class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-lg">적용</button>
+        </div>
+      `).join("");
+      if (picker) picker.innerHTML = html;
+      if (list) list.innerHTML = html;
+      document.querySelectorAll("[data-apply-template]").forEach(btn => {
+        btn.onclick = () => {
+          const t = state.templates.find(v => v.id === btn.dataset.applyTemplate);
+          if (!t) return;
+          document.getElementById("projectTitle").value = t.title;
+          document.getElementById("projectMemo").value = t.body;
+          document.getElementById("templatePicker").classList.add("hidden");
+          switchTab("project");
+        };
+      });
+    }
+
+    function renderJournal(keyword = "") {
+      const wrap = document.getElementById("journalList");
+      const items = (state.projects || []).filter(p => JSON.stringify(p).toLowerCase().includes(keyword.toLowerCase()));
+      if (!items.length) {
+        wrap.innerHTML = "<p class='text-sm text-slate-500'>저장된 일지가 없습니다.</p>";
+        return;
+      }
+      wrap.innerHTML = items.map(p => `
+        <article class="bg-white border border-slate-200 rounded-2xl p-4 cursor-pointer" data-open-detail="${p.id}">
+          <p class="font-semibold mb-1">${escapeHtml(p.title)}</p>
+          <p class="text-xs text-slate-500 mb-2">${escapeHtml(p.date)} · 대상 ${escapeHtml(p.target || "-")}</p>
+          <p class="text-sm whitespace-pre-wrap text-slate-700 mb-3">${escapeHtml(p.report || p.context || "")}</p>
+          <div class="flex flex-wrap gap-2">
+            <button data-txt="${p.id}" class="bg-slate-800 text-white text-xs px-2 py-1 rounded">TXT</button>
+            <button data-pdf="${p.id}" class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">PDF</button>
+            <button data-visual="${p.id}" class="bg-blue-600 text-white text-xs px-2 py-1 rounded">시각화</button>
+          </div>
+        </article>
+      `).join("");
+      document.querySelectorAll("[data-txt]").forEach(btn => btn.onclick = (e) => { e.stopPropagation(); downloadTxt(btn.dataset.txt); });
+      document.querySelectorAll("[data-pdf]").forEach(btn => btn.onclick = (e) => { e.stopPropagation(); downloadPdf(btn.dataset.pdf); });
+      document.querySelectorAll("[data-visual]").forEach(btn => btn.onclick = (e) => { e.stopPropagation(); openVisuals(btn.dataset.visual); });
+      document.querySelectorAll("[data-open-detail]").forEach(el => {
+        el.onclick = () => {
+          const id = el.dataset.openDetail;
+          openVisuals(id);
+        };
+      });
+    }
+
+    function renderAccount() {
+      document.getElementById("accName").textContent = state.user?.name || "-";
+      document.getElementById("accEmail").textContent = state.user?.email || "-";
+    }
+
+    function openVisuals(id) {
+      state.selectedVisualId = id;
+      saveState();
+      const entry = state.projects.find(v => v.id === id);
+      if (!entry) return;
+      document.getElementById("visualEntryInfo").innerHTML =
+        "<strong>" + escapeHtml(entry.title) + "</strong><br><span class='text-xs text-slate-500'>" + escapeHtml(entry.date) + "</span>";
+      const rows = [
+        ["활동명", entry.title],
+        ["대상", entry.target || "-"],
+        ["상황", entry.context || "-"],
+        ["요약", entry.report || "-"]
+      ];
+      document.getElementById("visualTableBody").innerHTML = rows.map(r =>
+        "<tr><td class='border border-slate-200 p-2 text-xs font-semibold'>" + escapeHtml(r[0]) +
+        "</td><td class='border border-slate-200 p-2 text-xs'>" + escapeHtml(r[1]) + "</td></tr>"
+      ).join("");
+      drawChart();
+      const img = document.getElementById("visualImage");
+      if (img) {
+        const q = encodeURIComponent((entry.title || "") + "," + (entry.target || "") + ",children,activity");
+        img.src = "https://source.unsplash.com/800x400/?" + q;
+      }
+      switchTab("visuals");
+    }
+
+    function drawChart() {
+      const ctx = document.getElementById("visualChart");
+      if (!ctx) return;
+      const counts = {};
+      state.projects.forEach(p => {
+        const k = (p.target || "미분류").split(" ")[0];
+        counts[k] = (counts[k] || 0) + 1;
+      });
+      const labels = Object.keys(counts);
+      const values = Object.values(counts);
+      if (visualChart) visualChart.destroy();
+      visualChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{ label: "대상별 프로젝트 수", data: values, backgroundColor: "#60a5fa" }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function updateProjectModeStyles() {
+      const tplBtn = document.getElementById("btnUseTemplate");
+      const manualBtn = document.getElementById("btnManualMode");
+      if (!tplBtn || !manualBtn) return;
+      if (state.projectMode === "template") {
+        tplBtn.className = "border border-blue-200 bg-blue-50 rounded-xl p-3 text-left";
+        manualBtn.className = "border border-slate-200 rounded-xl p-3 text-left";
+      } else {
+        tplBtn.className = "border border-slate-200 rounded-xl p-3 text-left";
+        manualBtn.className = "border border-blue-200 bg-blue-50 rounded-xl p-3 text-left";
+      }
+    }
+
+    function downloadTxt(id) {
+      const e = state.projects.find(v => v.id === id);
+      if (!e) return;
+      const text = "[온마을 일지]\n제목: " + e.title + "\n대상: " + (e.target || "-") + "\n날짜: " + e.date + "\n\n요약:\n" + (e.report || e.context || "-");
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "onmaeul_journal.txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadPdf(id) {
+      const e = state.projects.find(v => v.id === id);
+      if (!e) return;
+      const html = `
+        <html><head><meta charset="UTF-8"><title>온마을 일지 PDF</title></head>
+        <body style="font-family:sans-serif;padding:24px;">
+          <h1>온마을 일지</h1>
+          <p><strong>제목:</strong> ${escapeHtml(e.title || "-")}</p>
+          <p><strong>대상:</strong> ${escapeHtml(e.target || "-")}</p>
+          <p><strong>날짜:</strong> ${escapeHtml(e.date || "-")}</p>
+          <h3>요약</h3>
+          <pre style="white-space:pre-wrap;">${escapeHtml(e.report || e.context || "-")}</pre>
+        </body></html>`;
+      const win = window.open("", "_blank");
+      if (!win) return;
+      win.document.write(html);
+      win.document.close();
+    }
+
+    function escapeHtml(v) {
+      return String(v || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
+    }
+
+    function renderIssues() {
+      const wrap = document.getElementById("issueList");
+      if (!wrap) return;
+      if (!state.issues.length) {
+        wrap.innerHTML = "<p class='text-[11px] text-slate-400'>등록된 마을 이슈가 없습니다.</p>";
+        return;
+      }
+      wrap.innerHTML = state.issues.map(i =>
+        `<div class="border border-slate-200 rounded-lg px-2 py-1.5">
+           <p class="text-[11px] font-semibold text-slate-700">[${escapeHtml(i.cat)}] ${escapeHtml(i.text)}</p>
+           <p class="text-[10px] text-slate-400">${escapeHtml(i.date)}</p>
+         </div>`
+      ).join("");
+    }
+
+    // init
+    loadState();
+    document.getElementById("loginForm").onsubmit = (e) => {
+      e.preventDefault();
+      const name = document.getElementById("loginName").value.trim();
+      const email = document.getElementById("loginEmail").value.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!name) { alert("이름을 입력해주세요."); return; }
+      if (!emailRegex.test(email)) { alert("이메일 형식이 올바르지 않습니다."); return; }
+      state.user = { name, email };
+      saveState();
+      setAuthedUI();
+    };
+    document.querySelectorAll(".nav-btn").forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
+    document.getElementById("btnStartProject").onclick = () => switchTab("project");
+    document.getElementById("btnGoAccount").onclick = () => switchTab("account");
+    document.getElementById("btnUseTemplate").onclick = () => {
+      state.projectMode = "template";
+      document.getElementById("templatePicker").classList.remove("hidden");
+      renderTemplates();
+      updateProjectModeStyles();
+    };
+    document.getElementById("btnManualMode").onclick = () => {
+      state.projectMode = "manual";
+      document.getElementById("templatePicker").classList.add("hidden");
+      updateProjectModeStyles();
+    };
+    document.getElementById("btnAiRecommend").onclick = () => {
+      const title = document.getElementById("projectTitle").value.trim();
+      const context = document.getElementById("projectContext").value.trim();
+      const text = buildRecommendation(title, context);
+      const box = document.getElementById("recommendBox");
+      box.classList.remove("hidden");
+      box.textContent = text;
+    };
+    document.getElementById("btnSaveJournal").onclick = () => {
+      const title = document.getElementById("projectTitle").value.trim() || "무제 프로젝트";
+      const target = document.getElementById("projectTarget").value.trim();
+      const context = document.getElementById("projectContext").value.trim();
+      const memo = document.getElementById("projectMemo").value.trim();
+      const recommend = document.getElementById("recommendBox").textContent.trim();
+      const entry = {
+        id: "p_" + Date.now(),
+        title, target, context, memo,
+        report: recommend || memo || context,
+        date: new Date().toLocaleString("ko-KR")
+      };
+      state.projects.unshift(entry);
+      saveState();
+      renderStats();
+      renderJournal();
+      alert("일지가 저장되었습니다.");
+    };
+    document.getElementById("btnGoVisualFromProject").onclick = () => {
+      if (!state.projects.length) { alert("먼저 일지를 저장해주세요."); return; }
+      openVisuals(state.projects[0].id);
+    };
+    document.getElementById("btnSearchJournal").onclick = () => {
+      renderJournal(document.getElementById("journalKeyword").value.trim());
+    };
+    document.getElementById("btnCreateTemplate").onclick = () => {
+      const title = document.getElementById("tplTitle").value.trim();
+      const body = document.getElementById("tplBody").value.trim();
+      if (!title) { alert("템플릿 제목을 입력하세요."); return; }
+      state.templates.unshift({ id: "t_" + Date.now(), title, body });
+      saveState();
+      renderTemplates();
+      document.getElementById("tplTitle").value = "";
+      document.getElementById("tplBody").value = "";
+    };
+    document.getElementById("btnLogout").onclick = () => {
+      state.user = null;
+      saveState();
+      setAuthedUI();
+    };
+    document.getElementById("btnDownloadTxt").onclick = () => {
+      if (!state.selectedVisualId) return;
+      downloadTxt(state.selectedVisualId);
+    };
+    document.getElementById("btnDownloadPdf").onclick = () => {
+      if (!state.selectedVisualId) return;
+      downloadPdf(state.selectedVisualId);
+    };
+
+    document.getElementById("btnMakeGoHome").onclick = () => {
+      const name = document.getElementById("childName").value.trim();
+      const time = document.getElementById("goHomeTime").value.trim();
+      const route = document.getElementById("goHomeRoute").value.trim() || "귀가";
+      if (!name || !time) { alert("아이 이름과 시간을 입력해주세요."); return; }
+      const msg = `${name} 아동이 ${time}에 ${route}로 안전하게 귀가를 시작했습니다. 오늘도 함께해 주셔서 감사합니다.`;
+      document.getElementById("goHomeResult").value = msg;
+      state.goHomeLogs.unshift({ name, time, route, msg, date: new Date().toLocaleString("ko-KR") });
+      saveState();
+    };
+
+    document.getElementById("btnAddIssue").onclick = () => {
+      const cat = document.getElementById("issueCategory").value;
+      const text = document.getElementById("issueText").value.trim();
+      if (!text) { alert("이슈 내용을 입력해주세요."); return; }
+      const item = { id: "i_" + Date.now(), cat, text, date: new Date().toLocaleDateString("ko-KR") };
+      state.issues.unshift(item);
+      saveState();
+      document.getElementById("issueText").value = "";
+      renderIssues();
+    };
+
+    setAuthedUI();
+    renderTemplates();
+    renderJournal();
+    renderIssues();
+    updateProjectModeStyles();
+    lucide.createIcons();
+  </script>
+</body>
+</html>
