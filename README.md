@@ -16,9 +16,7 @@ Chart.js: https://github.com/chartjs/Chart.js
 jsPDF: https://github.com/parallax/jsPDF
 Compromise(NLP): https://github.com/spencermountain/compromise
 (옵션) Flask/OpenAI/python-docx (서버 모드에서 사용)
-이미지 소스(현재): Unsplash Source URL 기반 동적 로드
-
-https://source.unsplash.com
+이미지 소스(현재): Unsplash Source URL 기반 동적 로드 https://source.unsplash.com
 
 3) 구현 방식 / 동작 원리
 기본 모드: proto_1.html 단일 파일 SPA 방식 (탭 전환 UI)
@@ -36,14 +34,5 @@ Flask(app.py)로 로컬 서버 실행
 필요 시 OpenAI API 연동 가능
 
 4) 실행 방법
-A. 빠른 실행(권장, HTML만)
-리포지토리 clone/download
-proto_1.html 더블클릭
-브라우저에서 바로 사용
-B. Flask 실행(서버 모드)
-프로젝트 폴더 이동
-가상환경 생성/활성화
-pip install -r requirements.txt
-.env.example를 복사해 .env 생성 후 키 입력
-python app.py
-브라우저에서 http://127.0.0.1:5000 접속
+A. 빠른 실행(권장, HTML만) 리포지토리 clone/download > proto_1.html 더블클릭 > 브라우저에서 바로 사용
+B. Flask 실행(서버 모드) 프로젝트 폴더 이동> 가상환경 생성/활성화 > pip install -r requirements.txt > .env.example를 복사해 .env 생성 후 키 입력> python app.py > 브라우저에서 http://127.0.0.1:5000 접속
