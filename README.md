@@ -19,6 +19,7 @@ Compromise(NLP): https://github.com/spencermountain/compromise
 이미지 소스(현재): Unsplash Source URL 기반 동적 로드
 
 https://source.unsplash.com
+
 3) 구현 방식 / 동작 원리
 기본 모드: proto_1.html 단일 파일 SPA 방식 (탭 전환 UI)
 데이터 저장: 브라우저 localStorage 사용
